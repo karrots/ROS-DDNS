@@ -27,7 +27,14 @@
 
 # Set the isFree test variable to true. Assemble the DNS entry to be created later.
 		:set isFree "true";
-		:set FQDN ([get [find where active-mac-address=$leaseActMAC] host-name] . "." . $topdomain);
+# dirtyHostname comed from client DHCP request which can contain spaces
+# cleanHostname is cleaned from those whitsepace
+		:local dirtyHostname [get [find where active-mac-address=$leaseActMAC] host-name];
+		:local cleanHostname "";
+		:for i from=0 to=([:len $dirtyHostname ]-1) do={ :local tmp [:pick $dirtyHostname  $i];
+			:if ($tmp !=" ") do={ :set cleanHostname  "$cleanHostname$tmp" } 
+		}
+		:set FQDN ($cleanHostname . "." . $topdomain);
 		
 # Check if the DNS entry exists already. Then verify we are not about to over write
 # another entry that isn't ours. Test using the $hostvalidationtoken
