@@ -1,9 +1,18 @@
+# https://github.com/karrots/ROS-DDNS
 #TODO
 # Clean up old entries if computer name changes between binds.
 
 # Domain to be added to your DHCP-clients hostname
 :local topdomain;
-:set topdomain "domain.name";
+/ip dhcp-server network;
+:do {
+	:set topdomain [get [find where ($leaseActIP in address)] domain];
+} on-error={
+	:set topdomain "default.domain.name"
+}
+:if ([:len $topdomain] > 0) do={
+	:set topdomain ("." . $topdomain)
+};
 
 # Set TTL to use for DDNS entries
 :local ttl;
@@ -32,15 +41,15 @@
 		:local dirtyHostname [get [find where active-mac-address=$leaseActMAC] host-name];
 		:local cleanHostname "";
 		:for i from=0 to=([:len $dirtyHostname ]-1) do={ :local tmp [:pick $dirtyHostname  $i];
-			:if ($tmp !=" ") do={ :set cleanHostname  "$cleanHostname$tmp" } 
+			:if ($tmp !=" ") do={ :set cleanHostname  "$cleanHostname$tmp" }
 		}
-		:set FQDN ($cleanHostname . "." . $topdomain);
-		
+		:set FQDN ($cleanHostname . $topdomain);
+
 # Check if the DNS entry exists already. Then verify we are not about to over write
 # another entry that isn't ours. Test using the $hostvalidationtoken
 		/ip dns static;
 		:if ([print count-only where name=$FQDN] > 0) do={
-# Is it the same host as before?		 
+# Is it the same host as before?
 			:if ([get [find where name=$FQDN] comment] = $hostvalidationtoken ) do={
 # Looks like it is. Check if IP changed and update entry if so.
 				:if ([get [find where name=$FQDN] address] != $leaseActIP) do={
